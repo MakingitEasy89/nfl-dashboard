@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>League Splits — Guide & Risk Disclosure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #02120B; color: #EDEEF0; font-family: 'Inter', -apple-system, sans-serif; }
+
+  .bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: #02120B; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(110px); }
+  .blob-a { width: 640px; height: 640px; top: -220px; left: -160px; background: radial-gradient(circle,#00E676,transparent 70%); opacity: 0.4; }
+  .blob-b { width: 560px; height: 560px; bottom: -200px; right: -140px; background: radial-gradient(circle,#00C853,transparent 70%); opacity: 0.35; }
+  .blob-c { width: 420px; height: 420px; top: 30%; right: 10%; background: radial-gradient(circle,#00E5C0,transparent 70%); opacity: 0.25; }
+  .grid-overlay { position: fixed; inset: 0; z-index: -1; background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0); background-size: 26px 26px; }
+
+  .wrap { max-width: 780px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  .eyebrow { font-size: 11px; letter-spacing: 0.18em; color: #00E676; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; }
+  h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 8px;
+       background: linear-gradient(90deg,#00E676,#B4FF39 45%,#00E5C0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .sub { font-size: 15px; color: #9CA3AB; line-height: 1.6; margin: 0 0 36px; }
+
+  .card { background: rgba(12,28,20,0.55); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.09);
+          border-radius: 16px; padding: 22px 24px; margin-bottom: 20px; }
+
+  .risk-card { background: rgba(255,61,113,0.07); border: 1px solid rgba(255,61,113,0.35); }
+  .risk-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #FF3D71; margin-bottom: 12px; }
+  .risk-card p, .risk-card li { color: #E8C4CC; font-size: 13.5px; line-height: 1.65; }
+  .risk-card ul { margin: 8px 0 0; padding-left: 20px; }
+  .risk-card li { margin-bottom: 6px; }
+
+  h2 { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #7C828D; font-weight: 800; margin: 0 0 14px; }
+  h3 { font-size: 15px; font-weight: 700; color: #EDEEF0; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  p { font-size: 13.5px; color: #A8AEB5; line-height: 1.65; margin: 0 0 4px; }
+
+  .tab-item { padding: 14px 0; border-top: 1px solid rgba(255,255,255,0.07); }
+  .tab-item:first-child { border-top: none; padding-top: 0; }
+  .tab-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
+
+  .methodology-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: baseline; }
+  .methodology-row .tranche { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 12px; width: 40px; flex-shrink: 0; }
+
+  .cta { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 999px;
+         background: linear-gradient(135deg,#00E676,#B4FF39); color: #08090B; font-weight: 800; font-size: 14px;
+         text-decoration: none; margin-top: 8px; transition: transform 0.18s ease, filter 0.18s ease; }
+  .cta:hover { transform: translateY(-2px); filter: brightness(1.08); }
+
+  .footer-note { font-size: 11px; color: #54585F; text-align: center; margin-top: 40px; line-height: 1.6; }
+  a { color: #00E5C0; }
+</style>
+</head>
+<body>
+<div class="bg"><div class="blob blob-a"></div><div class="blob blob-b"></div><div class="blob blob-c"></div></div>
+<div class="grid-overlay"></div>
+
+<div class="wrap">
+  <div class="eyebrow">NFL 2024–25 · MATCHUP INTELLIGENCE</div>
+  <h1>League Splits — Guide</h1>
+  <p class="sub">What this tool actually is, what it isn't, and how to get around it. Read the risk section before you build a slip.</p>
+
+  <div class="card risk-card">
+    <div class="risk-title">⚠️ Risk & Disclosure — read this first</div>
+    <p>This is a data analysis and backtesting tool built from real 2024–2025 NFL play-by-play data. It is <b>not</b> a sportsbook, does not process real money, and nothing you do here places an actual bet.</p>
+    <ul>
+      <li><b>Historical performance doesn't guarantee future results.</b> Every hit rate on this site is a look backward — how a line would have performed against real games — not a prediction of what will happen next.</li>
+      <li><b>"Fair odds" have no vig removed and no sportsbook behind them.</b> They're 1 ÷ historical hit rate, a math exercise, not a live market price.</li>
+      <li><b>The AI Assist feature is a rules-based heuristic</b>, not a live model call or expert opinion. It swaps legs based on simple probability comparisons.</li>
+      <li><b>Rookie stats use a single season</b> with no prior-year holdout, so their confidence numbers are less rigorous than veteran numbers — even though they're displayed the same way.</li>
+      <li><b>Bet tracking is a simulation.</b> "Submitted" bets resolve instantly against real historical game logs (or a probability-weighted simulation where exact logs aren't available) — this shows how the engine would have performed, it does not mean any wager occurred.</li>
+      <li>If you use this alongside real sportsbook betting, remember: past stats are one input, not a system that guarantees profit. Bet only what you can afford to lose, and treat every number here as a starting point for your own judgment, not a final answer.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>What this is</h2>
+    <p>A matchup analytics dashboard covering every skill-position player, QB, kicker, and pass rusher in the NFL across the 2024 and 2025 seasons, plus 2025 rookies. Every stat is tagged with the real defensive front and coverage shell that was on the field for that play — not a static "this team runs a 4-3" label.</p>
+  </div>
+
+  <div class="card">
+    <h2>How to use it</h2>
+
+    <div class="tab-item">
+      <h3><span class="tab-tag" style="background:#00E5FF22;color:#00E5FF;">OFFENSE</span> / <span class="tab-tag" style="background:#B98CF222;color:#C77DFF;">DEFENSE</span></h3>
+      <p>Browse every player's season stats. Click a card to see their splits by defensive front, coverage type, weather, and home/away — plus every touchdown or sack they've been part of, with the exact context it happened in.</p>
+    </div>
+
+    <div class="tab-item">
+      <h3><span class="tab-tag" style="background:#FFB80022;color:#FFB800;">MARKET PULSE</span></h3>
+      <p>A snapshot of real Kalshi (CFTC-regulated exchange) prices — season-long leader races, win totals, and player thresholds. This is a manual snapshot, not a live feed, since the page can't reach outside APIs on its own.</p>
+    </div>
+
+    <div class="tab-item">
+      <h3><span class="tab-tag" style="background:#00E67622;color:#00E676;">PROP FLOORS + PARLAY</span></h3>
+      <p>The core tool. Each player-stat gets three lines — P25, P50, P75 — set from 2024 games and tested against real 2025 games. Tap a tranche to add it to your slip at the bottom. Combine several legs to see a combined probability and payout, then use AI Assist to see a suggested swap for your weakest leg. Hit <b>Submit Bet</b> to resolve it instantly and send it to Tracking. The slip can be minimized with the ▼ button if it's in your way.</p>
+    </div>
+
+    <div class="tab-item">
+      <h3><span class="tab-tag" style="background:#FF3D7122;color:#FF3D71;">MATCHUP</span></h3>
+      <p>For each player in your current slip, pick a hypothetical opponent and see their real points-allowed rank, yards allowed to that position group, and whether that's a genuine weak spot for the defense. There's no 2026 schedule yet, so treat this as a "what if" tool, not an actual upcoming game.</p>
+    </div>
+
+    <div class="tab-item">
+      <h3><span class="tab-tag" style="background:#FFD54A22;color:#FFD54A;">TRACKING</span></h3>
+      <p>Your submitted bet history and running record — wins, losses, pending futures, net units, and which tranche (P25/P50/P75) has actually worked best for you. This is stored in your browser only; it won't follow you to another device, and it won't show anyone else's picks.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>How the numbers are built</h2>
+    <p style="margin-bottom:14px;">Every ladder line is a percentile of a player's 2024 game log, tested against real 2025 games the line never saw — an out-of-sample backtest, not a threshold grading its own training data.</p>
+    <div class="methodology-row"><span class="tranche" style="color:#00E676;">P25</span><p>25th percentile — a conservative floor, historically cleared ~75% of the time.</p></div>
+    <div class="methodology-row"><span class="tranche" style="color:#00E5FF;">P50</span><p>Median — a 50/50 line.</p></div>
+    <div class="methodology-row"><span class="tranche" style="color:#FFB800;">P75</span><p>75th percentile — the stretch tranche, ~25% historical clear rate, bigger number when it hits.</p></div>
+    <p style="margin-top:10px;">A <b style="color:#FF3D71;">TEAM CHANGE</b> badge means the 2024 line was set on a different team/offense than the one being tested. A <b style="color:#B4FF39;">ROOKIE</b> badge means there's no 2024 baseline at all — the line is a single-season number.</p>
+  </div>
+
+  <div style="text-align:center; margin-top: 36px;">
+    <a class="cta" href="./index.html">← Open the Dashboard</a>
+  </div>
+
+  <div class="footer-note">
+    Data: 2024–2025 NFL play-by-play and Next Gen Stats participation (nflverse), joined per-play.<br/>
+    Not affiliated with the NFL, any NFL team, or any sportsbook. For entertainment and analysis purposes only.
+  </div>
+</div>
+</body>
+</html>
