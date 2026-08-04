@@ -152,6 +152,11 @@ function GlobalStyle() {
       ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
       ::-webkit-scrollbar-track { background: transparent; }
       input:focus, select:focus { outline: none; }
+      @media (max-width: 520px) {
+        .glass { border-radius: 14px !important; }
+        input, select { font-size: 16px !important; } /* prevents iOS auto-zoom on focus */
+        button { min-height: 38px; }
+      }
       .bounce-in { animation: bounceIn 0.45s cubic-bezier(.34,1.56,.64,1) both; }
       @keyframes bounceIn { 0% { opacity:0; transform: scale(0.9) translateY(10px);} 60% { opacity:1; transform: scale(1.02) translateY(-2px);} 100% { transform: scale(1) translateY(0);} }
       .bubble-btn { transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), filter 0.18s ease, box-shadow 0.18s ease; }
@@ -1009,7 +1014,7 @@ function ParlaySlip({ slip, onRemove, onClear, stake, setStake, aiSuggestion, on
         boxShadow: "0 -6px 24px rgba(0,0,0,0.5)"
       }} className="fade-in">
         <div onClick={()=>setMinimized(false)} style={{
-          maxWidth: 980, margin: "0 auto", padding: "10px 20px", display: "flex", alignItems: "center",
+          width: "90%", maxWidth: 1600, margin: "0 auto", padding: "10px 20px", display: "flex", alignItems: "center",
           justifyContent: "space-between", cursor: "pointer", gap: 12, flexWrap: "wrap"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1033,7 +1038,7 @@ function ParlaySlip({ slip, onRemove, onClear, stake, setStake, aiSuggestion, on
       background: "rgba(12,13,16,0.92)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.1)",
       boxShadow: "0 -10px 40px rgba(0,0,0,0.5)", maxHeight: "58vh", overflowY: "auto"
     }} className="fade-in">
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: "14px 20px 20px" }}>
+      <div style={{ width: "90%", maxWidth: 1600, margin: "0 auto", padding: "14px 20px 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
             🎟️ PARLAY SLIP <span style={{ background: ACCENT.amber, color: "#0B0C0E", borderRadius: 999, padding: "1px 8px", fontSize: 11 }}>{slip.length}</span>
@@ -1416,6 +1421,93 @@ function BetCard({ bet }) {
     </Glass>
   );
 }
+// =====================================================================
+// STD-DEV ANALYSIS (how each resolved leg compares to the player's own history)
+// =====================================================================
+const STAT_FIELD_FOR_Z = { ...STAT_FIELD_MAP.skill, ...STAT_FIELD_MAP.qb, ...STAT_FIELD_MAP.k };
+function zScoreFor(leg) {
+  if (!leg.exact || leg.status === "pending") return null;
+  const field = STAT_FIELD_FOR_Z[leg.stat];
+  if (!field) return null;
+  let source = null;
+  if (STAT_FIELD_MAP.skill[leg.stat]) source = RECEIVERS.find(p => p.name === leg.player);
+  else if (STAT_FIELD_MAP.qb[leg.stat]) source = QBS.find(p => p.name === leg.player);
+  else if (STAT_FIELD_MAP.k[leg.stat]) source = KICKERS.find(p => p.name === leg.player);
+  if (!source || !source.gamelog || source.gamelog.length < 4) return null;
+  const vals = source.gamelog.map(g => g[field]).filter(v => typeof v === "number");
+  const mean = vals.reduce((a,b)=>a+b,0) / vals.length;
+  const variance = vals.reduce((a,b)=>a+(b-mean)**2,0) / vals.length;
+  const std = Math.sqrt(variance);
+  if (std === 0) return null;
+  return (leg.actual - mean) / std;
+}
+function zBucketLabel(z) {
+  if (z < -2) return "< -2σ";
+  if (z < -1) return "-2σ to -1σ";
+  if (z < 0) return "-1σ to 0";
+  if (z < 1) return "0 to +1σ";
+  if (z < 2) return "+1σ to +2σ";
+  return "> +2σ";
+}
+function ZScoreChart({ points }) {
+  if (points.length === 0) return null;
+  const buckets = ["< -2σ", "-2σ to -1σ", "-1σ to 0", "0 to +1σ", "+1σ to +2σ", "> +2σ"];
+  const grouped = buckets.map(b => ({
+    label: b,
+    win: points.filter(p => zBucketLabel(p.z) === b && p.status === "win").length,
+    loss: points.filter(p => zBucketLabel(p.z) === b && p.status === "loss").length,
+  }));
+  const maxCount = Math.max(...grouped.map(g => g.win + g.loss), 1);
+  const avgZ = points.reduce((s,p)=>s+p.z,0) / points.length;
+  const avgZWin = points.filter(p=>p.status==="win").length ? points.filter(p=>p.status==="win").reduce((s,p)=>s+p.z,0) / points.filter(p=>p.status==="win").length : null;
+  const avgZLoss = points.filter(p=>p.status==="loss").length ? points.filter(p=>p.status==="loss").reduce((s,p)=>s+p.z,0) / points.filter(p=>p.status==="loss").length : null;
+
+  return (
+    <Glass hover={false} style={{ padding: "18px 20px" }}>
+      <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#7C828D", textTransform: "uppercase", marginBottom: 4, fontWeight: 700 }}>
+        Performance vs. Expectation
+      </div>
+      <div style={{ fontSize: 11.5, color: "#54585F", marginBottom: 16, lineHeight: 1.5 }}>
+        For each resolved pick, how many standard deviations the actual game result was from that player's own historical average — not from your line, from their real distribution. 0 = a totally typical game for them.
+      </div>
+
+      <div style={{ display: "flex", gap: 24, marginBottom: 18, flexWrap: "wrap" }}>
+        <StatChip label="Avg Z (all)" value={avgZ} decimals={2} accent={avgZ>=0?ACCENT.teal:ACCENT.rose} />
+        {avgZWin !== null && <StatChip label="Avg Z (wins)" value={avgZWin} decimals={2} accent={ACCENT.green} />}
+        {avgZLoss !== null && <StatChip label="Avg Z (losses)" value={avgZLoss} decimals={2} accent={ACCENT.rose} />}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 140, marginBottom: 8 }}>
+        {grouped.map(g => {
+          const total = g.win + g.loss;
+          const h = (total / maxCount) * 120;
+          const winH = total ? (g.win / total) * h : 0;
+          const lossH = total ? (g.loss / total) * h : 0;
+          return (
+            <div key={g.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+              <div style={{ fontSize: 10, color: "#8B8F98", marginBottom: 4 }}>{total || ""}</div>
+              <div style={{ width: "100%", display: "flex", flexDirection: "column-reverse", borderRadius: "4px 4px 0 0", overflow: "hidden" }}>
+                {g.loss > 0 && <div className="bar-fill" style={{ height: lossH, background: ACCENT.rose }} />}
+                {g.win > 0 && <div className="bar-fill" style={{ height: winH, background: ACCENT.green }} />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        {buckets.map(b => <div key={b} style={{ flex: 1, fontSize: 9, color: "#54585F", textAlign: "center" }}>{b}</div>)}
+      </div>
+      <div style={{ display: "flex", gap: 14, marginTop: 14, fontSize: 11, color: "#8B8F98" }}>
+        <span><span style={{display:"inline-block",width:9,height:9,background:ACCENT.green,borderRadius:2,marginRight:5}}></span>Win</span>
+        <span><span style={{display:"inline-block",width:9,height:9,background:ACCENT.rose,borderRadius:2,marginRight:5}}></span>Loss</span>
+      </div>
+      <div style={{ fontSize: 10, color: "#54585F", marginTop: 12 }}>
+        Only legs with an exact real-game resolution are included ({points.length} of them) — simulated legs (no embedded game log for that stat) don't have a meaningful z-score to compute.
+      </div>
+    </Glass>
+  );
+}
+
 function TrackingView() {
   const [bets, setBets] = useState([]);
   useEffect(() => {
@@ -1443,6 +1535,12 @@ function TrackingView() {
       trancheStats[l.tranche].total++;
       if (l.status === "win") trancheStats[l.tranche].hit++;
     }
+  }));
+
+  const zPoints = [];
+  resolved.forEach(b => b.legs.forEach(l => {
+    const z = zScoreFor(l);
+    if (z !== null && isFinite(z)) zPoints.push({ z, status: l.status });
   }));
 
   if (bets.length === 0) {
@@ -1486,6 +1584,8 @@ function TrackingView() {
         </Glass>
       )}
 
+      {zPoints.length > 0 && <div style={{ marginBottom: 20 }}><ZScoreChart points={zPoints} /></div>}
+
       <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#7C828D", textTransform: "uppercase", marginBottom: 10, fontWeight: 700 }}>Bet History</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {bets.map(b => <BetCard key={b.id} bet={b} />)}
@@ -1515,6 +1615,7 @@ function App() {
   const [posFilter, setPosFilter] = useState("all");
   const [sortKey, setSortKey] = useState("yards");
   const [selected, setSelected] = useState(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [slip, setSlip] = useState([]);
   const [stake, setStake] = useState(20);
   const [aiSuggestion, setAiSuggestion] = useState(null);
@@ -1561,7 +1662,7 @@ function App() {
     <div style={{ position: "relative", minHeight: "100vh", fontFamily: "'Inter', -apple-system, sans-serif", color: "#EDEEF0" }}>
       <GlobalStyle />
       <AmbientBackground />
-      <div style={{ position: "relative", zIndex: 1, maxWidth: 980, margin: "0 auto", padding: "28px 20px 70px" }}>
+      <div style={{ position: "relative", zIndex: 1, width: "90%", maxWidth: 1600, margin: "0 auto", padding: "28px 20px 70px" }}>
 
         <div style={{ marginBottom: 22, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
           <div>
@@ -1594,29 +1695,40 @@ function App() {
         {(tab==="offense" || tab==="defense") && !selected && (
           <>
             <Glass hover={false} style={{ padding: "14px 16px", marginBottom: 18 }}>
-              <input
-                placeholder={tab==="offense" ? "Search offense…" : "Search pass rushers…"}
-                value={search} onChange={e=>setSearch(e.target.value)}
-                style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "9px 12px", color: "#EDEEF0", fontSize: 13.5, marginBottom: 12 }}
-              />
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-                <Pill active={posFilter==="all"} onClick={()=>setPosFilter("all")}>All Positions</Pill>
-                {(tab==="offense"?offensePositions:defensePositions).map(pos => (
-                  <Pill key={pos} active={posFilter===pos} onClick={()=>setPosFilter(posFilter===pos?"all":pos)}>{pos}</Pill>
-                ))}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: filtersOpen ? 12 : 0 }}>
+                <input
+                  placeholder={tab==="offense" ? "Search offense…" : "Search pass rushers…"}
+                  value={search} onChange={e=>setSearch(e.target.value)}
+                  style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "11px 12px", color: "#EDEEF0", fontSize: 15 }}
+                />
+                <button onClick={()=>setFiltersOpen(o=>!o)} className="bubble-btn" style={{
+                  flexShrink: 0, padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",
+                  background: (posFilter!=="all"||team!=="all") ? `${ACCENT.teal}22` : "rgba(255,255,255,0.04)",
+                  color: (posFilter!=="all"||team!=="all") ? ACCENT.teal : "#C7CAD1", fontSize: 13, fontWeight: 700, cursor: "pointer"
+                }}>⚙ {filtersOpen ? "Hide" : "Filters"}</button>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-                <select value={team} onChange={e=>setTeam(e.target.value)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, color: team==="all" ? "#8B8F98" : "#EDEEF0", fontSize: 12.5, fontWeight: 600, padding: "6px 10px" }}>
-                  <option value="all">Any Team</option>
-                  {TEAMS.map(t => <option key={t} value={t}>{TEAM_NAMES[t]}</option>)}
-                </select>
-                {tab==="offense" && (<>
-                  <span style={{ color: "#3D4147", fontSize: 12 }}>sort:</span>
-                  {[["yards","Prod."],["volume","Volume"],["tds","TD/FG"],["epa","Efficiency"]].map(([k,l]) => (
-                    <Pill key={k} active={sortKey===k} onClick={()=>setSortKey(k)} accent={ACCENT.teal}>{l}</Pill>
-                  ))}
-                </>)}
-              </div>
+              {filtersOpen && (
+                <div className="fade-in">
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                    <Pill active={posFilter==="all"} onClick={()=>setPosFilter("all")}>All Positions</Pill>
+                    {(tab==="offense"?offensePositions:defensePositions).map(pos => (
+                      <Pill key={pos} active={posFilter===pos} onClick={()=>setPosFilter(posFilter===pos?"all":pos)}>{pos}</Pill>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                    <select value={team} onChange={e=>setTeam(e.target.value)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, color: team==="all" ? "#8B8F98" : "#EDEEF0", fontSize: 13, fontWeight: 600, padding: "8px 12px" }}>
+                      <option value="all">Any Team</option>
+                      {TEAMS.map(t => <option key={t} value={t}>{TEAM_NAMES[t]}</option>)}
+                    </select>
+                    {tab==="offense" && (<>
+                      <span style={{ color: "#3D4147", fontSize: 12 }}>sort:</span>
+                      {[["yards","Prod."],["volume","Volume"],["tds","TD/FG"],["epa","Efficiency"]].map(([k,l]) => (
+                        <Pill key={k} active={sortKey===k} onClick={()=>setSortKey(k)} accent={ACCENT.teal}>{l}</Pill>
+                      ))}
+                    </>)}
+                  </div>
+                </div>
+              )}
             </Glass>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10 }}>
