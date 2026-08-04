@@ -166,6 +166,42 @@ function GlobalStyle() {
   );
 }
 
+function InjuryBadge({ playerName, compact = false }) {
+  const inj = INJURIES[playerName];
+  if (!inj) return null;
+  return (
+    <span title={`${inj.status}${inj.injury ? " — " + inj.injury : ""} (Week ${inj.week} report)`} style={{
+      fontSize: 9, color: ACCENT.rose, border: `1px solid ${ACCENT.rose}55`, borderRadius: 8, padding: "1px 6px", fontWeight: 700,
+      whiteSpace: "nowrap"
+    }}>
+      {compact ? "+ INJ" : `+ ${inj.status.toUpperCase()}`}
+    </span>
+  );
+}
+
+// Only relevant for QB/RB — their own play depends most directly on the offensive line in front of them.
+function findInjuredLineman(team) {
+  const ol = OL_STARTERS[team];
+  if (!ol) return null;
+  for (const [posAbbr, name] of Object.entries(ol)) {
+    if (INJURIES[name]) return { name, posAbbr, ...INJURIES[name] };
+  }
+  return null;
+}
+function OLInjuryBadge({ team, pos, compact = false }) {
+  if (pos !== "QB" && pos !== "RB") return null;
+  const hurt = findInjuredLineman(team);
+  if (!hurt) return null;
+  return (
+    <span title={`${hurt.name} (${hurt.posAbbr}) is ${hurt.status}${hurt.injury ? " — " + hurt.injury : ""} — affects this player's protection/blocking`} style={{
+      fontSize: 9, color: "#FFD54A", border: "1px solid #FFD54A55", borderRadius: 8, padding: "1px 6px", fontWeight: 700,
+      whiteSpace: "nowrap"
+    }}>
+      {compact ? "+ OL" : `+ OL: ${hurt.posAbbr} ${hurt.status.toUpperCase()}`}
+    </span>
+  );
+}
+
 function Pill({ active, onClick, children, accent = ACCENT.amber }) {
   return (
     <button className="pill" onClick={onClick} style={{
@@ -224,7 +260,7 @@ function SkillDetail({ p, onClose }) {
     <div className="fade-in">
       <button onClick={onClose} style={{ background: "none", border: "none", color: "#7C828D", fontSize: 12.5, cursor: "pointer", marginBottom: 14, padding: 0 }}>← Back to leaderboard</button>
       <div style={{ fontSize: 10.5, letterSpacing: "0.16em", color: ACCENT.amber, fontWeight: 700, marginBottom: 4 }}>{p.pos} · {TEAM_NAMES[p.team] || p.team}</div>
-      <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0, marginBottom: 16 }}>{p.name}</h2>
+      <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0, marginBottom: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>{p.name}<InjuryBadge playerName={p.name} /><OLInjuryBadge team={p.team} pos={p.pos} /></h2>
 
       <Glass hover={false} style={{ padding: "16px 18px", marginBottom: 12, display: "flex", gap: 22, flexWrap: "wrap" }}>
         <StatChip label="Targets" value={p.overall.targets} />
@@ -303,12 +339,14 @@ function QBDetail({ p, onClose }) {
   const allVals = [...frontEntries, ...covEntries].map(([,s]) => Math.abs(s.epaPerAtt || 0));
   const maxAbs = Math.max(0.3, ...allVals);
   const gamesPlayed = (p.gamelog || []).length;
+  const olLine = OL_STARTERS[p.team];
+  const olPositions = [["LT","Left Tackle"],["LG","Left Guard"],["C","Center"],["RG","Right Guard"],["RT","Right Tackle"]];
 
   return (
     <div className="fade-in">
       <button onClick={onClose} style={{ background: "none", border: "none", color: "#7C828D", fontSize: 12.5, cursor: "pointer", marginBottom: 14, padding: 0 }}>← Back to leaderboard</button>
       <div style={{ fontSize: 10.5, letterSpacing: "0.16em", color: ACCENT.green, fontWeight: 700, marginBottom: 4 }}>QB · {TEAM_NAMES[p.team] || p.team}</div>
-      <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0, marginBottom: 16 }}>{p.name}</h2>
+      <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0, marginBottom: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>{p.name}<InjuryBadge playerName={p.name} /><OLInjuryBadge team={p.team} pos="QB" /></h2>
 
       <Glass hover={false} style={{ padding: "16px 18px", marginBottom: 12, display: "flex", gap: 22, flexWrap: "wrap" }}>
         <StatChip label="Attempts" value={p.overall.attempts} />
@@ -327,6 +365,26 @@ function QBDetail({ p, onClose }) {
           <StatChip label="Rush Yards" value={p.overall.rushYards} accent={ACCENT.green} />
           <StatChip label="Rush TDs" value={p.overall.rushTD} accent={ACCENT.amber} />
           <StatChip label="Total Yards" value={p.overall.totalYards} accent={ACCENT.teal} />
+        </Glass>
+      )}
+
+      {olLine && (
+        <Glass hover={false} style={{ padding: "16px 18px", marginBottom: 16 }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#7C828D", textTransform: "uppercase", marginBottom: 4, fontWeight: 700 }}>Offensive Line — Current Starters</div>
+          <div style={{ fontSize: 10.5, color: "#54585F", marginBottom: 10 }}>From the most recent depth chart — who's protecting him right now.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+            {olPositions.map(([abbr, label]) => {
+              const name = olLine[abbr];
+              return (
+                <div key={abbr} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "8px 10px" }}>
+                  <div style={{ fontSize: 9.5, color: "#6B7078", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                    {name || "—"}{name && <InjuryBadge playerName={name} compact />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </Glass>
       )}
 
@@ -373,7 +431,7 @@ function KickerDetail({ p, onClose }) {
     <div className="fade-in">
       <button onClick={onClose} style={{ background: "none", border: "none", color: "#7C828D", fontSize: 12.5, cursor: "pointer", marginBottom: 14, padding: 0 }}>← Back to leaderboard</button>
       <div style={{ fontSize: 10.5, letterSpacing: "0.16em", color: ACCENT.rose, fontWeight: 700, marginBottom: 4 }}>K · {TEAM_NAMES[p.team] || p.team}</div>
-      <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0, marginBottom: 16 }}>{p.name}</h2>
+      <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>{p.name}<InjuryBadge playerName={p.name} /></h2>
 
       <Glass hover={false} style={{ padding: "16px 18px", marginBottom: 12, display: "flex", gap: 22, flexWrap: "wrap" }}>
         <StatChip label="FG Att" value={p.overall.attempts} />
@@ -517,7 +575,7 @@ function OffenseCard({ p, onSelect, idx }) {
     <Glass onClick={() => onSelect(p)} style={{ padding: "14px 16px", animationDelay: `${Math.min(idx,20)*18}ms` }}>
       <div className="fade-in" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>{p.name}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>{p.name}<InjuryBadge playerName={p.name} compact /><OLInjuryBadge team={p.team} pos={p.pos} compact /></div>
           <div style={{ fontSize: 11, color: "#7C828D", marginTop: 2 }}>{p.pos} · {TEAM_NAMES[p.team]||p.team}</div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -581,6 +639,8 @@ function MarketCard({ title, options, meta, accent, live }) {
 }
 
 const CHAMPIONSHIP_SNAPSHOT = {"fetchedAt": "2026-06-25", "teams": [{"team": "LAR", "kalshiPct": 17, "polyPct": 10}, {"team": "SEA", "kalshiPct": 8, "polyPct": 11}, {"team": "KC", "kalshiPct": 7, "polyPct": 5.8}, {"team": "BUF", "kalshiPct": 6, "polyPct": 8}, {"team": "BAL", "kalshiPct": 6, "polyPct": 6}, {"team": "DEN", "kalshiPct": 6, "polyPct": 4}, {"team": "SF", "kalshiPct": 5, "polyPct": 5}]};
+const OL_STARTERS = __OL_STARTERS__;
+const INJURIES = __INJURIES__;
 const KALSHI_API = "https://api.elections.kalshi.com/trade-api/v2";
 // Series tickers confirmed against kalshi.com; unconfirmed guesses are attempted but fail silently to snapshot.
 const KALSHI_LEADER_SERIES = [
@@ -1053,7 +1113,7 @@ function ParlaySlip({ slip, onRemove, onClear, stake, setStake, aiSuggestion, on
           {slip.map((s,i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "8px 12px" }}>
               <div style={{ fontSize: 12.5 }}>
-                <b>{s.entry.player}</b> <span style={{ color: "#7C828D" }}>{s.entry.stat} · {legLineLabel({...s.entry, tranche:s.tranche, kind:s.entry.kind||"ladder"})}</span>
+                <b>{s.entry.player}</b> <span style={{ color: "#7C828D" }}>{s.entry.stat} · {legLineLabel({...s.entry, tranche:s.tranche, kind:s.entry.kind||"ladder"})}</span> <InjuryBadge playerName={s.entry.player} compact /> <OLInjuryBadge team={s.entry.team} pos={s.entry.pos} compact />
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: ACCENT.teal }}>{fmt(legProb({...s.entry, tranche:s.tranche, kind:s.entry.kind||"ladder"}),0)}%</span>
