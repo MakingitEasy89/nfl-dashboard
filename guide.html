@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>League Splits — Guide & Risk Disclosure</title>
+<title>Statum — Guide & Risk Disclosure</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
@@ -59,8 +62,27 @@
 <div class="grid-overlay"></div>
 
 <div class="wrap">
+  <a href="./index.html" title="Back to Dashboard" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;margin-bottom:18px;">
+    <svg id="logo-svg" width="34" height="34" viewBox="0 0 48 48" style="flex-shrink:0;">
+      <defs>
+        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop id="grad-c1" offset="0%" stop-color="#00E676" />
+          <stop id="grad-c3" offset="55%" stop-color="#B4FF39" />
+          <stop id="grad-c4" offset="100%" stop-color="#00E5C0" />
+        </linearGradient>
+      </defs>
+      <polygon points="24,2 44,13 44,35 24,46 4,35 4,13" fill="none" stroke="url(#logoGrad)" stroke-width="2" opacity="0.55" />
+      <path d="M 14 32 L 14 24 L 22 24 L 22 14" fill="none" stroke="url(#logoGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 34 32 L 34 20 L 26 20 L 26 14" fill="none" stroke="url(#logoGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />
+      <circle id="dot-c1" cx="24" cy="14" r="3.2" fill="#00E676" />
+      <circle id="dot-c3" cx="14" cy="32" r="2.2" fill="#B4FF39" />
+      <circle id="dot-c4" cx="34" cy="32" r="2.2" fill="#00E5C0" />
+    </svg>
+    <span style="font-size:13px;font-weight:800;color:#8B8F98;">Statum</span>
+  </a>
+
   <div class="eyebrow">NFL 2024–25 · MATCHUP INTELLIGENCE</div>
-  <h1>League Splits — Guide</h1>
+  <h1>Statum — Guide</h1>
   <p class="sub">What this tool actually is, what it isn't, and how to get around it. Read the risk section before you build a slip.</p>
 
   <div class="card risk-card">
@@ -125,8 +147,25 @@
 
   <div class="footer-note">
     Data: 2024–2025 NFL play-by-play and Next Gen Stats participation (nflverse), joined per-play.<br/>
-    Not affiliated with the NFL, any NFL team, or any sportsbook. For entertainment and analysis purposes only.
+    Not affiliated with the NFL, any NFL team, or any sportsbook. For entertainment and analysis purposes only.<br/><br/>
+    © 2026 — built for personal use and shared with friends. Not for redistribution, rehosting, or commercial use without permission.
   </div>
 </div>
+<script>
+  // Same daily theme logic as the dashboard, so the logo color matches whatever mood is showing there today.
+  // Same Statum gold identity as the dashboard — day/night variant follows local time.
+  const STATUM_THEME = {
+    night: { c1: "#D4A94A", c3: "#F0C674", c4: "#C9963F" },
+    day:   { c1: "#F0C674", c3: "#F7DB9E", c4: "#E0B565" },
+  };
+  const hour = new Date().getHours();
+  const theme = (hour >= 6 && hour < 18) ? STATUM_THEME.day : STATUM_THEME.night;
+  document.getElementById('grad-c1').setAttribute('stop-color', theme.c1);
+  document.getElementById('grad-c3').setAttribute('stop-color', theme.c3);
+  document.getElementById('grad-c4').setAttribute('stop-color', theme.c4);
+  document.getElementById('dot-c1').setAttribute('fill', theme.c1);
+  document.getElementById('dot-c3').setAttribute('fill', theme.c3);
+  document.getElementById('dot-c4').setAttribute('fill', theme.c4);
+</script>
 </body>
 </html>
